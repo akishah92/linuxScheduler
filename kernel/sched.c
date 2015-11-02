@@ -29,7 +29,6 @@
 #include <linux/completion.h>
 #include <linux/prefetch.h>
 #include <linux/compiler.h>
-
 #include <asm/uaccess.h>
 #include <asm/mmu_context.h>
 
@@ -70,6 +69,22 @@ extern void mem_use(void);
 
 #define NICE_TO_TICKS(nice)	(TICK_SCALE(20-(nice))+1)
 
+#define BASE_TIME_SLICE 10
+
+static inline int priority_to_ticks(int priority){
+
+	double time_slice = BASE_TIME_SLICE;
+	int ticks;
+	
+	for(int i=0; i < priority; i++){
+		time_slice += 1;
+	}
+	
+	ticks = (HZ/1000)*time_slice;
+
+	return ticks;
+
+}
 
 /*
  *	Init task must be ok at boot for the ix86 as we will check its signals
@@ -211,7 +226,7 @@ out:
  */
 static inline int preemption_goodness(struct task_struct * prev, struct task_struct * p, int cpu)
 {
-	return goodness(p, cpu, prev->active_mm) - goodness(prev, cpu, prev->active_mm);
+	return prev->priority - p->priority;
 }
 
 /*
@@ -589,7 +604,10 @@ need_resched_back:
 	/* move an exhausted RR process to be last.. */
 	if (unlikely(prev->policy == SCHED_RR))
 		if (!prev->counter) {
-			prev->counter = NICE_TO_TICKS(prev->nice);
+			prev->counter = priority_to_ticks(prev->priority);
+			if(prev->priority<255){
+			prev->priority++;
+			}
 			move_last_runqueue(prev);
 		}
 
@@ -598,6 +616,10 @@ need_resched_back:
 			if (signal_pending(prev)) {
 				prev->state = TASK_RUNNING;
 				break;
+			}
+		case TASK_UNINTERRUPTIBLE:
+			if(prev->blocked==29){
+			  	prev->priority--; //Increasing priority on I/O
 			}
 		default:
 			del_from_runqueue(prev);
@@ -614,7 +636,8 @@ repeat_schedule:
 	 * Default process to select..
 	 */
 	next = idle_task(this_cpu);
-	c = -1000;
+	/*
+	  c = -1000;
 	list_for_each(tmp, &runqueue_head) {
 		p = list_entry(tmp, struct task_struct, run_list);
 		if (can_schedule(p, this_cpu)) {
@@ -623,19 +646,31 @@ repeat_schedule:
 				c = weight, next = p;
 		}
 	}
+	*/
+
+	for(int i = 0; i < 256; i++){
+	
+		if(!list_empty(runqueue_array.queue[i])){
+		
+			next = runqueue_array.queue[i]->next;
+			break;
+		}
+	}
 
 	/* Do we need to re-calculate counters? */
+	/*
 	if (unlikely(!c)) {
 		struct task_struct *p;
 
 		spin_unlock_irq(&runqueue_lock);
 		read_lock(&tasklist_lock);
 		for_each_task(p)
-			p->counter = (p->counter >> 1) + NICE_TO_TICKS(p->nice);
+			p->counter = (p->counter >> 1) + priority_to_ticks(p->priority);
 		read_unlock(&tasklist_lock);
 		spin_lock_irq(&runqueue_lock);
 		goto repeat_schedule;
 	}
+	*/
 
 	/*
 	 * from this point on nothing can prevent us from
@@ -1180,8 +1215,7 @@ asmlinkage long sys_sched_rr_get_interval(pid_t pid, struct timespec *interval)
 	read_lock(&tasklist_lock);
 	p = find_process_by_pid(pid);
 	if (p)
-		jiffies_to_timespec(p->policy & SCHED_FIFO ? 0 : NICE_TO_TICKS(p->nice),
-				    &t);
+		jiffies_to_timespec(p->policy & SCHED_FIFO ? 0 : priority_to_ticks(p->priority, &t);
 	read_unlock(&tasklist_lock);
 	if (p)
 		retval = copy_to_user(interval, &t, sizeof(t)) ? -EFAULT : 0;
