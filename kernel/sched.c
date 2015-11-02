@@ -74,9 +74,9 @@ extern void mem_use(void);
 static inline int priority_to_ticks(int priority){
 
 	double time_slice = BASE_TIME_SLICE;
-	int ticks;
+	int ticks, i;
 	
-	for(int i=0; i < priority; i++){
+	for(i=0; i < priority; i++){
 		time_slice += 1;
 	}
 	
@@ -116,8 +116,8 @@ struct prio_array {
 
 };
 
-static LIST_HEAD(runqueue_head);
-static prio_array runqueue_array;
+//static LIST_HEAD(runqueue_head);
+static struct prio_array runqueue_array;
 
 /*
  * We align per-CPU scheduling data on cacheline boundaries,
@@ -618,9 +618,8 @@ need_resched_back:
 				break;
 			}
 		case TASK_UNINTERRUPTIBLE:
-			if(prev->blocked==29){
 			  	prev->priority--; //Increasing priority on I/O
-			}
+			
 		default:
 			del_from_runqueue(prev);
 		case TASK_RUNNING:;
@@ -647,12 +646,12 @@ repeat_schedule:
 		}
 	}
 	*/
-
-	for(int i = 0; i < 256; i++){
+	int i;
+	for(i = 0; i < 256; i++){
 	
-		if(!list_empty(runqueue_array.queue[i])){
+		if(!list_empty(&(runqueue_array.queue[i]))){
 		
-			next = runqueue_array.queue[i]->next;
+			next = runqueue_array.queue[i].next;
 			break;
 		}
 	}
@@ -1215,7 +1214,7 @@ asmlinkage long sys_sched_rr_get_interval(pid_t pid, struct timespec *interval)
 	read_lock(&tasklist_lock);
 	p = find_process_by_pid(pid);
 	if (p)
-		jiffies_to_timespec(p->policy & SCHED_FIFO ? 0 : priority_to_ticks(p->priority, &t);
+		jiffies_to_timespec(p->policy & SCHED_FIFO ? 0 : priority_to_ticks(p->priority), &t);
 	read_unlock(&tasklist_lock);
 	if (p)
 		retval = copy_to_user(interval, &t, sizeof(t)) ? -EFAULT : 0;
@@ -1424,10 +1423,10 @@ void __init sched_init(void)
 	int cpu = smp_processor_id();
 	int nr;
 	
-	prio_array* array;
-	array = &runqueue_array;
+        struct prio_array* array = &runqueue_array;
 
-	for(int i = 0; i < MAX_PRIO; i++){
+	int i;
+	for(i = 0; i < MAX_PRIO; i++){
 	
 		INIT_LIST_HEAD(array->queue + i);
 		
