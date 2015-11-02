@@ -92,7 +92,17 @@ struct task_struct * init_tasks[NR_CPUS] = {&init_task, };
 spinlock_t runqueue_lock __cacheline_aligned = SPIN_LOCK_UNLOCKED;  /* inner */
 rwlock_t tasklist_lock __cacheline_aligned = RW_LOCK_UNLOCKED;	/* outer */
 
+
+#define MAX_PRIO 256
+
+struct prio_array {
+
+	struct list_head queue[MAX_PRIO];
+
+};
+
 static LIST_HEAD(runqueue_head);
+static prio_array runqueue_array;
 
 /*
  * We align per-CPU scheduling data on cacheline boundaries,
@@ -124,6 +134,8 @@ extern struct task_struct *child_reaper;
 #define can_schedule(p,cpu) (1)
 
 #endif
+
+
 
 void scheduling_functions_start_here(void) { }
 
@@ -328,14 +340,14 @@ send_now_idle:
  */
 static inline void add_to_runqueue(struct task_struct * p)
 {
-	list_add_tail(&p->run_list, &runqueue_head);
+	list_add_tail(&p->run_list, &(runqueue_array.queue[p->priority]));
 	nr_running++;
 }
 
 static inline void move_last_runqueue(struct task_struct * p)
 {
 	list_del(&p->run_list);
-	list_add_tail(&p->run_list, &runqueue_head);
+	list_add_tail(&p->run_list, &(runqueue_array.queue[p->priority]));
 }
 
 /*
@@ -1377,6 +1389,15 @@ void __init sched_init(void)
 	 */
 	int cpu = smp_processor_id();
 	int nr;
+	
+	prio_array* array;
+	array = &runqueue_array;
+
+	for(int i = 0; i < MAX_PRIO; i++){
+	
+		INIT_LIST_HEAD(array->queue + i);
+		
+	}
 
 	init_task.processor = cpu;
 

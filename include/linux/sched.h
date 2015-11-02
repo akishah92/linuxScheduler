@@ -284,6 +284,7 @@ struct task_struct {
 	/*
 	 * offsets of these are hardcoded elsewhere - touch with care
 	 */
+	int priority;
 	volatile long state;	/* -1 unrunnable, 0 runnable, >0 stopped */
 	unsigned long flags;	/* per process flags, defined below */
 	int sigpending;
