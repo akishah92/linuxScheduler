@@ -171,7 +171,7 @@ void scheduling_functions_start_here(void) { }
 static inline int goodness(struct task_struct * p, int this_cpu, struct mm_struct *this_mm)
 {
 	int weight;
-
+	printk("GOODNESS FUNCTION\n");
 	/*
 	 * select the current process after every other
 	 * runnable process, but before the idle thread.
@@ -226,6 +226,7 @@ out:
  */
 static inline int preemption_goodness(struct task_struct * prev, struct task_struct * p, int cpu)
 {
+	printk("PREMEP GOODNESS\n");
 	return prev->priority - p->priority;
 }
 
@@ -238,6 +239,7 @@ static FASTCALL(void reschedule_idle(struct task_struct * p));
 
 static void reschedule_idle(struct task_struct * p)
 {
+	printk("RESCHEDULE IDLE\n");
 #ifdef CONFIG_SMP
 	int this_cpu = smp_processor_id();
 	struct task_struct *tsk, *target_tsk;
@@ -355,12 +357,14 @@ send_now_idle:
  */
 static inline void add_to_runqueue(struct task_struct * p)
 {
+	printk("ADD TO RUNQUEUE\n");
 	list_add_tail(&p->run_list, &(runqueue_array.queue[p->priority]));
 	nr_running++;
 }
 
 static inline void move_last_runqueue(struct task_struct * p)
 {
+	printk("MOVE LAST RUQ\n");
 	list_del(&p->run_list);
 	list_add_tail(&p->run_list, &(runqueue_array.queue[p->priority]));
 }
@@ -375,6 +379,7 @@ static inline void move_last_runqueue(struct task_struct * p)
  */
 static inline int try_to_wake_up(struct task_struct * p, int synchronous)
 {
+	printk("TRY TO WAKE UP\n");
 	unsigned long flags;
 	int success = 0;
 
@@ -396,13 +401,16 @@ out:
 
 inline int wake_up_process(struct task_struct * p)
 {
+	
+	printk("BP1\n");
 	return try_to_wake_up(p, 0);
 }
 
 static void process_timeout(unsigned long __data)
 {
 	struct task_struct * p = (struct task_struct *) __data;
-
+	
+	printk("BP2\n");
 	wake_up_process(p);
 }
 
@@ -437,6 +445,7 @@ signed long schedule_timeout(signed long timeout)
 	struct timer_list timer;
 	unsigned long expire;
 
+	printk("BP3\n");
 	switch (timeout)
 	{
 	case MAX_SCHEDULE_TIMEOUT:
@@ -491,6 +500,7 @@ signed long schedule_timeout(signed long timeout)
  */
 static inline void __schedule_tail(struct task_struct *prev)
 {
+	printk("BP4\n");
 #ifdef CONFIG_SMP
 	int policy;
 
@@ -578,6 +588,7 @@ asmlinkage void schedule(void)
 	struct list_head *tmp;
 	int this_cpu, c;
 
+	printk("BP5 main\n");
 
 	spin_lock_prefetch(&runqueue_lock);
 
@@ -762,6 +773,7 @@ static inline void __wake_up_common (wait_queue_head_t *q, unsigned int mode,
 {
 	struct list_head *tmp;
 	struct task_struct *p;
+	printk("BP6\n");
 
 	CHECK_MAGIC_WQHEAD(q);
 	WQ_CHECK_LIST_HEAD(&q->task_list);
@@ -782,7 +794,9 @@ static inline void __wake_up_common (wait_queue_head_t *q, unsigned int mode,
 }
 
 void __wake_up(wait_queue_head_t *q, unsigned int mode, int nr)
+
 {
+	printk("BP7\n");
 	if (q) {
 		unsigned long flags;
 		wq_read_lock_irqsave(&q->lock, flags);
@@ -793,6 +807,7 @@ void __wake_up(wait_queue_head_t *q, unsigned int mode, int nr)
 
 void __wake_up_sync(wait_queue_head_t *q, unsigned int mode, int nr)
 {
+	printk("BP8\n");
 	if (q) {
 		unsigned long flags;
 		wq_read_lock_irqsave(&q->lock, flags);
@@ -804,6 +819,7 @@ void __wake_up_sync(wait_queue_head_t *q, unsigned int mode, int nr)
 void complete(struct completion *x)
 {
 	unsigned long flags;
+	printk("BP9\n");
 
 	spin_lock_irqsave(&x->wait.lock, flags);
 	x->done++;
@@ -813,6 +829,7 @@ void complete(struct completion *x)
 
 void wait_for_completion(struct completion *x)
 {
+	printk("BP10\n");
 	spin_lock_irq(&x->wait.lock);
 	if (!x->done) {
 		DECLARE_WAITQUEUE(wait, current);
@@ -848,6 +865,7 @@ void wait_for_completion(struct completion *x)
 
 void interruptible_sleep_on(wait_queue_head_t *q)
 {
+	printk("BP11\n");
 	SLEEP_ON_VAR
 
 	current->state = TASK_INTERRUPTIBLE;
@@ -859,6 +877,7 @@ void interruptible_sleep_on(wait_queue_head_t *q)
 
 long interruptible_sleep_on_timeout(wait_queue_head_t *q, long timeout)
 {
+	printk("BP12\n");
 	SLEEP_ON_VAR
 
 	current->state = TASK_INTERRUPTIBLE;
@@ -872,6 +891,7 @@ long interruptible_sleep_on_timeout(wait_queue_head_t *q, long timeout)
 
 void sleep_on(wait_queue_head_t *q)
 {
+	printk("BP13\n");
 	SLEEP_ON_VAR
 	
 	current->state = TASK_UNINTERRUPTIBLE;
@@ -883,6 +903,7 @@ void sleep_on(wait_queue_head_t *q)
 
 long sleep_on_timeout(wait_queue_head_t *q, long timeout)
 {
+	printk("BP14\n");
 	SLEEP_ON_VAR
 	
 	current->state = TASK_UNINTERRUPTIBLE;
@@ -908,6 +929,7 @@ void scheduling_functions_end_here(void) { }
  */
 void set_cpus_allowed(struct task_struct *p, unsigned long new_mask)
 {
+	printk("BP15\n");
 	new_mask &= cpu_online_map;
 	BUG_ON(!new_mask);
 
@@ -945,6 +967,7 @@ void set_cpus_allowed(struct task_struct *p, unsigned long new_mask)
 asmlinkage long sys_nice(int increment)
 {
 	long newprio;
+	printk("BP16\n");
 
 	/*
 	 *	Setpriority might change our priority at the same moment.
@@ -974,6 +997,7 @@ asmlinkage long sys_nice(int increment)
 static inline struct task_struct *find_process_by_pid(pid_t pid)
 {
 	struct task_struct *tsk = current;
+	printk("BP17\n");
 
 	if (pid)
 		tsk = find_task_by_pid(pid);
@@ -986,6 +1010,7 @@ static int setscheduler(pid_t pid, int policy,
 	struct sched_param lp;
 	struct task_struct *p;
 	int retval;
+	printk("BP18\n");
 
 	retval = -EINVAL;
 	if (!param || pid < 0)
@@ -1051,11 +1076,13 @@ out_nounlock:
 asmlinkage long sys_sched_setscheduler(pid_t pid, int policy, 
 				      struct sched_param *param)
 {
+	printk("BP19\n");
 	return setscheduler(pid, policy, param);
 }
 
 asmlinkage long sys_sched_setparam(pid_t pid, struct sched_param *param)
 {
+	printk("BP20\n");
 	return setscheduler(pid, -1, param);
 }
 
@@ -1063,6 +1090,8 @@ asmlinkage long sys_sched_getscheduler(pid_t pid)
 {
 	struct task_struct *p;
 	int retval;
+	printk("BP21\n");
+
 
 	retval = -EINVAL;
 	if (pid < 0)
@@ -1084,6 +1113,7 @@ asmlinkage long sys_sched_getparam(pid_t pid, struct sched_param *param)
 	struct task_struct *p;
 	struct sched_param lp;
 	int retval;
+	printk("BP22\n");
 
 	retval = -EINVAL;
 	if (!param || pid < 0)
@@ -1119,6 +1149,7 @@ asmlinkage long sys_sched_yield(void)
 	 * to be atomic.) In threaded applications this optimization
 	 * gets triggered quite often.
 	 */
+	printk("BP23\n");
 
 	int nr_pending = nr_running;
 
@@ -1159,6 +1190,7 @@ asmlinkage long sys_sched_yield(void)
  */
 void yield(void)
 {
+	printk("BP24\n");
 	set_current_state(TASK_RUNNING);
 	sys_sched_yield();
 	schedule();
@@ -1166,6 +1198,7 @@ void yield(void)
 
 void __cond_resched(void)
 {
+	printk("BP25\n");
 	set_current_state(TASK_RUNNING);
 	schedule();
 }
@@ -1173,6 +1206,7 @@ void __cond_resched(void)
 asmlinkage long sys_sched_get_priority_max(int policy)
 {
 	int ret = -EINVAL;
+	printk("BP26\n");
 
 	switch (policy) {
 	case SCHED_FIFO:
@@ -1189,6 +1223,7 @@ asmlinkage long sys_sched_get_priority_max(int policy)
 asmlinkage long sys_sched_get_priority_min(int policy)
 {
 	int ret = -EINVAL;
+	printk("BP27\n");
 
 	switch (policy) {
 	case SCHED_FIFO:
@@ -1206,6 +1241,7 @@ asmlinkage long sys_sched_rr_get_interval(pid_t pid, struct timespec *interval)
 	struct timespec t;
 	struct task_struct *p;
 	int retval = -EINVAL;
+	printk("BP28\n");
 
 	if (pid < 0)
 		goto out_nounlock;
@@ -1227,6 +1263,7 @@ static void show_task(struct task_struct * p)
 	unsigned long free = 0;
 	int state;
 	static const char * stat_nam[] = { "R", "S", "D", "Z", "T", "W" };
+	printk("BP29\n");
 
 	printk("%-13.13s ", p->comm);
 	state = p->state ? ffz(~p->state) + 1 : 0;
@@ -1277,6 +1314,7 @@ static void show_task(struct task_struct * p)
 
 char * render_sigset_t(sigset_t *set, char *buffer)
 {
+	printk("BP30\n");
 	int i = _NSIG, x;
 	do {
 		i -= 4, x = 0;
@@ -1292,6 +1330,7 @@ char * render_sigset_t(sigset_t *set, char *buffer)
 
 void show_state(void)
 {
+	printk("BP31\n");
 	struct task_struct *p;
 
 #if (BITS_PER_LONG == 32)
@@ -1330,6 +1369,7 @@ void show_state(void)
 void reparent_to_init(void)
 {
 	struct task_struct *this_task = current;
+	printk("BP32\n");
 
 	write_lock_irq(&tasklist_lock);
 
@@ -1371,6 +1411,7 @@ void reparent_to_init(void)
 void daemonize(void)
 {
 	struct fs_struct *fs;
+	printk("BP33\n");
 
 
 	/*
@@ -1399,6 +1440,7 @@ extern unsigned long wait_init_idle;
 
 void __init init_idle(void)
 {
+	printk("BP34\n");
 	struct schedule_data * sched_data;
 	sched_data = &aligned_data[smp_processor_id()].schedule_data;
 
@@ -1420,32 +1462,35 @@ void __init sched_init(void)
 	 * We have to do a little magic to get the first
 	 * process right in SMP mode.
 	 */
+	printk("BP35\n");
+
 	int cpu = smp_processor_id();
 	int nr;
-	
+	printk("CHEKPOINT 1\n");	
         struct prio_array* array = &runqueue_array;
-
+	printk("CHECKPOINT 2\n");
 	int i;
 	for(i = 0; i < MAX_PRIO; i++){
-	
+		printk ("%d\n",i);
 		INIT_LIST_HEAD(array->queue + i);
 		
 	}
-
+	printk("CHECKPOINT 3\n");
 	init_task.processor = cpu;
-
+	printk("CHECKPOINT 4\n");
 	for(nr = 0; nr < PIDHASH_SZ; nr++)
 		pidhash[nr] = NULL;
-
+	printk("CHECKPOINT 5\n");
 	init_timervecs();
-
+	
 	init_bh(TIMER_BH, timer_bh);
 	init_bh(TQUEUE_BH, tqueue_bh);
 	init_bh(IMMEDIATE_BH, immediate_bh);
-
+	printk("CHECKPOINT 6\n");
 	/*
 	 * The boot idle thread does lazy MMU switching as well:
 	 */
 	atomic_inc(&init_mm.mm_count);
 	enter_lazy_tlb(&init_mm, current, cpu);
+	printk("CHECKPOINT 7\n");
 }

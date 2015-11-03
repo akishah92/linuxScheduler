@@ -1,5 +1,5 @@
-#define UTS_VERSION "#6 Mon Nov 2 06:38:30 EST 2015"
-#define LINUX_COMPILE_TIME "06:38:30"
+#define UTS_VERSION "#10 Tue Nov 3 05:11:46 EST 2015"
+#define LINUX_COMPILE_TIME "05:11:46"
 #define LINUX_COMPILE_BY "user"
 #define LINUX_COMPILE_HOST "osvm"
 #define LINUX_COMPILE_DOMAIN ""
