@@ -71,10 +71,10 @@ extern void mem_use(void);
 
 #define BASE_TIME_SLICE 10
 
-static inline int priority_to_ticks(int priority){
+static inline long priority_to_ticks(long priority){
 
 	double time_slice = BASE_TIME_SLICE;
-	int ticks, i;
+	long ticks, i;
 	
 	for(i=0; i < priority; i++){
 		time_slice += 1;
@@ -110,14 +110,10 @@ rwlock_t tasklist_lock __cacheline_aligned = RW_LOCK_UNLOCKED;	/* outer */
 
 #define MAX_PRIO 256
 
-struct prio_array {
+struct list_head scheduler_queues[MAX_PRIO];
 
-	struct list_head queue[MAX_PRIO];
-
-};
 
 //static LIST_HEAD(runqueue_head);
-static struct prio_array runqueue_array;
 
 /*
  * We align per-CPU scheduling data on cacheline boundaries,
@@ -355,14 +351,14 @@ send_now_idle:
  */
 static inline void add_to_runqueue(struct task_struct * p)
 {
-	list_add_tail(&p->run_list, &(runqueue_array.queue[p->priority]));
+	list_add_tail(&p->run_list, &(scheduler_queues[p->priority]));
 	nr_running++;
 }
 
 static inline void move_last_runqueue(struct task_struct * p)
 {
 	list_del(&p->run_list);
-	list_add_tail(&p->run_list, &(runqueue_array.queue[p->priority]));
+	list_add_tail(&p->run_list, &(scheduler_queues[p->priority]));
 }
 
 /*
@@ -576,8 +572,7 @@ asmlinkage void schedule(void)
 	struct schedule_data * sched_data;
 	struct task_struct *prev, *next, *p;
 	struct list_head *tmp;
-	int this_cpu, c;
-
+	int this_cpu, c,i;
 
 	spin_lock_prefetch(&runqueue_lock);
 
@@ -604,10 +599,11 @@ need_resched_back:
 	/* move an exhausted RR process to be last.. */
 	if (unlikely(prev->policy == SCHED_RR))
 		if (!prev->counter) {
-			prev->counter = priority_to_ticks(prev->priority);
 			if(prev->priority<255){
 			prev->priority++;
 			}
+			
+			prev->counter = priority_to_ticks(prev->priority);
 			move_last_runqueue(prev);
 		}
 
@@ -646,12 +642,11 @@ repeat_schedule:
 		}
 	}
 	*/
-	int i;
 	for(i = 0; i < 256; i++){
 	
-		if(!list_empty(&(runqueue_array.queue[i]))){
-		
-			next = runqueue_array.queue[i].next;
+		if(!list_empty(&(scheduler_queues[i]))){
+	
+			next = scheduler_queues[i].next;
 			break;
 		}
 	}
@@ -1423,15 +1418,19 @@ void __init sched_init(void)
 	int cpu = smp_processor_id();
 	int nr;
 	
-        struct prio_array* array = &runqueue_array;
-
 	int i;
 	for(i = 0; i < MAX_PRIO; i++){
 	
-		INIT_LIST_HEAD(array->queue + i);
+		scheduler_queues[i].next = &(scheduler_queues[i]);
+		scheduler_queues[i].prev = &(scheduler_queues[i]);
 		
 	}
 
+	for (i=0;i<MAX_PRIO;i++)
+	{
+		if (scheduler_queues[i].next == &(scheduler_queues[i]))
+			printk("YES %d\n",i);
+	}
 	init_task.processor = cpu;
 
 	for(nr = 0; nr < PIDHASH_SZ; nr++)

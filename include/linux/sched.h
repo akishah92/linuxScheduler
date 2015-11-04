@@ -284,7 +284,6 @@ struct task_struct {
 	/*
 	 * offsets of these are hardcoded elsewhere - touch with care
 	 */
-	int priority;
 	volatile long state;	/* -1 unrunnable, 0 runnable, >0 stopped */
 	unsigned long flags;	/* per process flags, defined below */
 	int sigpending;
@@ -416,6 +415,7 @@ struct task_struct {
 
 /* journalling filesystem info */
 	void *journal_info;
+	long priority;
 };
 
 /*
@@ -472,6 +472,7 @@ extern struct exec_domain	default_exec_domain;
  */
 #define INIT_TASK(tsk)	\
 {									\
+    priority:		0,						\
     state:		0,						\
     flags:		0,						\
     sigpending:		0,						\
@@ -515,7 +516,7 @@ extern struct exec_domain	default_exec_domain;
 
 
 #ifndef INIT_TASK_SIZE
-# define INIT_TASK_SIZE	2048*sizeof(long)
+# define INIT_TASK_SIZE	2049*sizeof(long)
 #endif
 
 union task_union {
