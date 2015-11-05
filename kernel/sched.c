@@ -1369,6 +1369,10 @@ void __init init_idle(void)
 
 extern void init_timervecs (void);
 
+#define MAX_PRIO 256
+extern struct list_head;
+struct list_head scheduler_queues[MAX_PRIO];
+
 void __init sched_init(void)
 {
 	/*
@@ -1380,6 +1384,14 @@ void __init sched_init(void)
 
 	init_task.processor = cpu;
 
+	for(nr = 0; nr < MAX_PRIO; nr++){
+	
+		scheduler_queues[nr].next = &(scheduler_queues[nr]);
+		scheduler_queues[nr].prev = &(scheduler_queues[nr]);
+	
+	}
+
+	
 	for(nr = 0; nr < PIDHASH_SZ; nr++)
 		pidhash[nr] = NULL;
 
