@@ -814,7 +814,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	if (p->ptrace & PT_PTRACED)
 		send_sig(SIGSTOP, p, 1);
 
-	p->priority=0;
+	//p->priority=0;
 
 	wake_up_process(p);		/* do this last */
 	++total_forks;

@@ -415,7 +415,7 @@ struct task_struct {
 
 /* journalling filesystem info */
 	void *journal_info;
-	long priority;
+	//long priority;
 };
 
 /*
@@ -472,7 +472,6 @@ extern struct exec_domain	default_exec_domain;
  */
 #define INIT_TASK(tsk)	\
 {									\
-    priority:		0,						\
     state:		0,						\
     flags:		0,						\
     sigpending:		0,						\
@@ -516,7 +515,7 @@ extern struct exec_domain	default_exec_domain;
 
 
 #ifndef INIT_TASK_SIZE
-# define INIT_TASK_SIZE	2049*sizeof(long)
+# define INIT_TASK_SIZE	2048*sizeof(long)
 #endif
 
 union task_union {

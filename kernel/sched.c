@@ -73,7 +73,9 @@ extern void mem_use(void);
 
 static inline long priority_to_ticks(long priority){
 
-	double time_slice = BASE_TIME_SLICE;
+	
+	/*double time_slice = BASE_TIME_SLICE;
+	
 	long ticks, i;
 	
 	for(i=0; i < priority; i++){
@@ -81,8 +83,8 @@ static inline long priority_to_ticks(long priority){
 	}
 	
 	ticks = (HZ/1000)*time_slice;
-
-	return ticks;
+*/
+	return 50;
 
 }
 
@@ -222,7 +224,7 @@ out:
  */
 static inline int preemption_goodness(struct task_struct * prev, struct task_struct * p, int cpu)
 {
-	return prev->priority - p->priority;
+	return 0;//prev->priority - p->priority;
 }
 
 /*
@@ -351,14 +353,14 @@ send_now_idle:
  */
 static inline void add_to_runqueue(struct task_struct * p)
 {
-	list_add_tail(&p->run_list, &(scheduler_queues[p->priority]));
+	list_add_tail(&p->run_list, &(scheduler_queues[0]));//p->priority]));
 	nr_running++;
 }
 
 static inline void move_last_runqueue(struct task_struct * p)
 {
 	list_del(&p->run_list);
-	list_add_tail(&p->run_list, &(scheduler_queues[p->priority]));
+	list_add_tail(&p->run_list, &(scheduler_queues[0]));//p->priority]));
 }
 
 /*
@@ -596,14 +598,16 @@ need_resched_back:
 
 	spin_lock_irq(&runqueue_lock);
 
+
+	
 	/* move an exhausted RR process to be last.. */
 	if (unlikely(prev->policy == SCHED_RR))
 		if (!prev->counter) {
-			if(prev->priority<255){
-			prev->priority++;
-			}
+			//if(prev->priority<255){
+			//prev->priority++;
+			//}
 			
-			prev->counter = priority_to_ticks(prev->priority);
+			prev->counter = priority_to_ticks(0);//prev->priority);
 			move_last_runqueue(prev);
 		}
 
@@ -614,7 +618,8 @@ need_resched_back:
 				break;
 			}
 		case TASK_UNINTERRUPTIBLE:
-			  	prev->priority--; //Increasing priority on I/O
+				break;  
+			  	//prev->priority--; //Increasing priority on I/O
 			
 		default:
 			del_from_runqueue(prev);
@@ -642,6 +647,7 @@ repeat_schedule:
 		}
 	}
 	*/
+	
 	for(i = 0; i < 256; i++){
 	
 		if(!list_empty(&(scheduler_queues[i]))){
@@ -651,6 +657,7 @@ repeat_schedule:
 		}
 	}
 
+	
 	/* Do we need to re-calculate counters? */
 	/*
 	if (unlikely(!c)) {
@@ -675,6 +682,7 @@ repeat_schedule:
 	task_set_cpu(next, this_cpu);
 	spin_unlock_irq(&runqueue_lock);
 
+	
 	if (unlikely(prev == next)) {
 		/* We won't go through the normal tail, so do this by hand */
 		prev->policy &= ~SCHED_YIELD;
@@ -695,8 +703,8 @@ repeat_schedule:
 	 * We drop the scheduler lock early (it's a global spinlock),
 	 * thus we have to lock the previous process from getting
 	 * rescheduled during switch_to().
-	 */
-
+	*/
+	
 #endif /* CONFIG_SMP */
 
 	kstat.context_swtch++;
@@ -729,6 +737,7 @@ repeat_schedule:
 		}
 	}
 
+
 	/*
 	 * This just switches the register state and the
 	 * stack.
@@ -736,10 +745,14 @@ repeat_schedule:
 	switch_to(prev, next, prev);
 	__schedule_tail(prev);
 
+	
 same_process:
+	
 	reacquire_kernel_lock(current);
 	if (current->need_resched)
 		goto need_resched_back;
+
+	show_state();
 	return;
 }
 
@@ -1209,7 +1222,7 @@ asmlinkage long sys_sched_rr_get_interval(pid_t pid, struct timespec *interval)
 	read_lock(&tasklist_lock);
 	p = find_process_by_pid(pid);
 	if (p)
-		jiffies_to_timespec(p->policy & SCHED_FIFO ? 0 : priority_to_ticks(p->priority), &t);
+		jiffies_to_timespec(p->policy & SCHED_FIFO ? 0 : priority_to_ticks(0), &t);//change p->priority to 0
 	read_unlock(&tasklist_lock);
 	if (p)
 		retval = copy_to_user(interval, &t, sizeof(t)) ? -EFAULT : 0;
