@@ -94,6 +94,11 @@ rwlock_t tasklist_lock __cacheline_aligned = RW_LOCK_UNLOCKED;	/* outer */
 
 static LIST_HEAD(runqueue_head);
 
+#define MAX_PRIO 256
+extern struct list_head;
+struct list_head scheduler_queues[MAX_PRIO];
+
+
 /*
  * We align per-CPU scheduling data on cacheline boundaries,
  * to prevent cacheline ping-pong.
@@ -328,14 +333,14 @@ send_now_idle:
  */
 static inline void add_to_runqueue(struct task_struct * p)
 {
-	list_add_tail(&p->run_list, &runqueue_head);
+	list_add_tail(&p->run_list, &(scheduler_queues[0]));
 	nr_running++;
 }
 
 static inline void move_last_runqueue(struct task_struct * p)
 {
 	list_del(&p->run_list);
-	list_add_tail(&p->run_list, &runqueue_head);
+	list_add_tail(&p->run_list, &(scheduler_queues[0]));
 }
 
 /*
@@ -602,8 +607,17 @@ repeat_schedule:
 	 * Default process to select..
 	 */
 	next = idle_task(this_cpu);
-	c = -1000;
-	list_for_each(tmp, &runqueue_head) {
+	int counter;
+	for(counter = 0; counter < MAX_PRIO; counter++)
+		if(!list_empty(&(scheduler_queues[counter])))
+		{
+			next = list_entry(scheduler_queues[counter].next,struct task_struct,run_list) ;
+		//	printk("%d\n",counter);
+			break;
+		}
+	/*
+	 c = -1000;
+	list_for_each(tmp, &(scheduler_queues[0])) {
 		p = list_entry(tmp, struct task_struct, run_list);
 		if (can_schedule(p, this_cpu)) {
 			int weight = goodness(p, this_cpu, prev->active_mm);
@@ -612,7 +626,7 @@ repeat_schedule:
 		}
 	}
 
-	/* Do we need to re-calculate counters? */
+	//  Do we need to re-calculate counters? 
 	if (unlikely(!c)) {
 		struct task_struct *p;
 
@@ -623,7 +637,7 @@ repeat_schedule:
 		read_unlock(&tasklist_lock);
 		spin_lock_irq(&runqueue_lock);
 		goto repeat_schedule;
-	}
+	}*/
 
 	/*
 	 * from this point on nothing can prevent us from
@@ -1369,9 +1383,6 @@ void __init init_idle(void)
 
 extern void init_timervecs (void);
 
-#define MAX_PRIO 256
-extern struct list_head;
-struct list_head scheduler_queues[MAX_PRIO];
 
 void __init sched_init(void)
 {

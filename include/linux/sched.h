@@ -415,6 +415,8 @@ struct task_struct {
 
 /* journalling filesystem info */
 	void *journal_info;
+
+	int priority;
 };
 
 /*
@@ -471,6 +473,7 @@ extern struct exec_domain	default_exec_domain;
  */
 #define INIT_TASK(tsk)	\
 {									\
+priority:		0,						\
     state:		0,						\
     flags:		0,						\
     sigpending:		0,						\
