@@ -4110,7 +4110,7 @@ kernel_version:	.ascii	"2.4.27-aks205-rk681-vs460-zs197"
 		.ascii	"@"
 		.ascii	"osvm"
 		.ascii	") "
-		.ascii	"#14 Fri Nov 6 06:47:00 EST 2015"
+		.ascii	"#20 Sat Nov 7 01:24:37 EST 2015"
 		.byte	0
 
 # This is the default real mode switch routine.

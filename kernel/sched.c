@@ -333,14 +333,14 @@ send_now_idle:
  */
 static inline void add_to_runqueue(struct task_struct * p)
 {
-	list_add_tail(&p->run_list, &(scheduler_queues[0]));
+	list_add_tail(&p->run_list, &(scheduler_queues[p->priority]));
 	nr_running++;
 }
 
 static inline void move_last_runqueue(struct task_struct * p)
 {
 	list_del(&p->run_list);
-	list_add_tail(&p->run_list, &(scheduler_queues[0]));
+	list_add_tail(&p->run_list, &(scheduler_queues[p->priority]));
 }
 
 /*
@@ -556,7 +556,6 @@ asmlinkage void schedule(void)
 	struct list_head *tmp;
 	int this_cpu, c;
 
-
 	spin_lock_prefetch(&runqueue_lock);
 
 	BUG_ON(!current->active_mm);
@@ -580,12 +579,28 @@ need_resched_back:
 	spin_lock_irq(&runqueue_lock);
 
 	/* move an exhausted RR process to be last.. */
-	if (unlikely(prev->policy == SCHED_RR))
+//	if (unlikely(prev->policy == SCHED_RR))
+	if (likely(prev->policy == SCHED_RR || prev->policy == SCHED_OTHER))	
 		if (!prev->counter) {
 			prev->counter = NICE_TO_TICKS(prev->nice);
+	      // 	printk("Counter value: %d\n",prev->counter);
+			if(prev->priority < MAX_PRIO-1)
+				prev -> priority++;
+		//	printk("%d\n",prev->priority);
 			move_last_runqueue(prev);
 		}
+	
 
+	/*
+	if((prev->policy & 0x0f) == SCHED_RR){
+	
+		printk("Round Robin\n");	
+	}
+	
+	if ((prev->policy & 0x0f) == SCHED_FIFO)
+		printk("FIFO FIFO FIFO\n");
+
+	*/	
 	switch (prev->state) {
 		case TASK_INTERRUPTIBLE:
 			if (signal_pending(prev)) {
