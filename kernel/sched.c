@@ -98,6 +98,13 @@ static LIST_HEAD(runqueue_head);
 extern struct list_head;
 struct list_head scheduler_queues[MAX_PRIO];
 
+int priority_to_ticks(int priority){
+
+	return (10 + priority)/10;
+
+
+}
+
 
 /*
  * We align per-CPU scheduling data on cacheline boundaries,
@@ -582,15 +589,12 @@ need_resched_back:
 //	if (unlikely(prev->policy == SCHED_RR))
 	if (likely(prev->policy == SCHED_RR || prev->policy == SCHED_OTHER))	
 		if (!prev->counter) {
-			prev->counter = NICE_TO_TICKS(prev->nice);
-	      // 	printk("Counter value: %d\n",prev->counter);
 			if(prev->priority < MAX_PRIO-1)
 				prev -> priority++;
-		//	printk("%d\n",prev->priority);
+			prev->counter = priority_to_ticks(prev->priority);
+	        //	printk("Counter value: %d %d\n",prev->counter,prev->priority);
 			move_last_runqueue(prev);
 		}
-	
-
 	/*
 	if((prev->policy & 0x0f) == SCHED_RR){
 	
@@ -648,7 +652,7 @@ repeat_schedule:
 		spin_unlock_irq(&runqueue_lock);
 		read_lock(&tasklist_lock);
 		for_each_task(p)
-			p->counter = (p->counter >> 1) + NICE_TO_TICKS(p->nice);
+			p->counter = (p->counter >> 1) + priority_to_ticks(p->priority);
 		read_unlock(&tasklist_lock);
 		spin_lock_irq(&runqueue_lock);
 		goto repeat_schedule;
@@ -1197,8 +1201,7 @@ asmlinkage long sys_sched_rr_get_interval(pid_t pid, struct timespec *interval)
 	read_lock(&tasklist_lock);
 	p = find_process_by_pid(pid);
 	if (p)
-		jiffies_to_timespec(p->policy & SCHED_FIFO ? 0 : NICE_TO_TICKS(p->nice),
-				    &t);
+		jiffies_to_timespec(p->policy & SCHED_FIFO ? 0 : priority_to_ticks(p->priority),&t);
 	read_unlock(&tasklist_lock);
 	if (p)
 		retval = copy_to_user(interval, &t, sizeof(t)) ? -EFAULT : 0;
