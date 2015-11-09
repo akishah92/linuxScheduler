@@ -97,10 +97,10 @@ static LIST_HEAD(runqueue_head);
 #define MAX_PRIO 256
 extern struct list_head;
 struct list_head scheduler_queues[MAX_PRIO];
+int priorityTicks[MAX_PRIO];
+inline int priority_to_ticks(int priority){
 
-int priority_to_ticks(int priority){
-
-	return (10 + priority)/10;
+	return priorityTicks[priority];
 
 
 }
@@ -212,6 +212,7 @@ out:
 static inline int preemption_goodness(struct task_struct * prev, struct task_struct * p, int cpu)
 {
 	return goodness(p, cpu, prev->active_mm) - goodness(prev, cpu, prev->active_mm);
+	        
 }
 
 /*
@@ -229,6 +230,7 @@ static void reschedule_idle(struct task_struct * p)
 	int cpu, best_cpu, i, max_prio;
 	cycles_t oldest_idle;
 
+	printk("In MP premption\n");
 	/*
 	 * shortcut if the woken up task's last CPU is
 	 * idle now.
@@ -294,7 +296,7 @@ send_now_idle:
 				target_tsk = tsk;
 			}
 		} else {
-			if (oldest_idle == (cycles_t)-1) {
+			if (oldest_idle == (cycles_t)-1){ 
 				int prio = preemption_goodness(tsk, p, cpu);
 
 				if (prio > max_prio) {
@@ -320,10 +322,13 @@ send_now_idle:
 #else /* UP */
 	int this_cpu = smp_processor_id();
 	struct task_struct *tsk;
-
 	tsk = cpu_curr(this_cpu);
+	/*when changed this to priority, the OS gets stuck in booting at a particular point. We think it's because the way the booting is done (since it was programmed with nice values, which can be hard coded), since when we allowed same priority level preemption, the OS booted up but the performance was degraded drastically, because of all the context switches.*/	
 	if (preemption_goodness(tsk, p, this_cpu) > 0)
+	{
 		tsk->need_resched = 1;
+	}
+
 #endif
 }
 
@@ -611,6 +616,11 @@ need_resched_back:
 				prev->state = TASK_RUNNING;
 				break;
 			}
+		case TASK_UNINTERRUPTIBLE://increase priority when blocking on I/O
+			if (prev->priority>0)
+				prev -> priority --;
+			del_from_runqueue(prev);
+			break;
 		default:
 			del_from_runqueue(prev);
 		case TASK_RUNNING:;
@@ -1409,7 +1419,7 @@ void __init sched_init(void)
 	 * process right in SMP mode.
 	 */
 	int cpu = smp_processor_id();
-	int nr;
+	int nr,counterValue;
 
 	init_task.processor = cpu;
 
@@ -1423,7 +1433,20 @@ void __init sched_init(void)
 	
 	for(nr = 0; nr < PIDHASH_SZ; nr++)
 		pidhash[nr] = NULL;
-
+	// Exponentially increasing counter values for 256 queues
+	priorityTicks[0] = 1;	
+	priorityTicks[1] = 8;
+	priorityTicks[2] = 10;
+	priorityTicks[3] = 11;
+	priorityTicks[4] = 12;
+	counterValue = 13;
+	for (nr=5;nr<MAX_PRIO;nr++)
+	{
+		if(nr == 7 || nr == 10 || nr==13 || nr==18 || nr==25 || nr==34 || nr==46 || nr==64 || nr==88 || nr==121 || nr==159 || nr==204)
+			counterValue++;
+		priorityTicks[nr] = counterValue;
+		
+	}
 	init_timervecs();
 
 	init_bh(TIMER_BH, timer_bh);

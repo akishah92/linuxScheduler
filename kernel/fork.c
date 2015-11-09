@@ -774,7 +774,7 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	 * more scheduling fairness. This is only important in the first
 	 * timeslice, on the long run the scheduling behaviour is unchanged.
 	 */
-	p->counter = (current->counter + 1) >> 1;
+	p->counter = 1;
 	current->counter >>= 1;
 	if (!current->counter)
 		current->need_resched = 1;
